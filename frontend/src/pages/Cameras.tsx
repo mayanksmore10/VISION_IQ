@@ -1,17 +1,44 @@
 // src/pages/Cameras.tsx
 
+import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Activity, Clock, Wifi, Video } from 'lucide-react';
 import CameraTile from '../components/cameras/CameraTile';
 import StatusDot from '../components/ui/StatusDot';
-import { cameras, events } from '../data';
+import { type Camera, type Event, events as mockEvents, cameras as mockCameras } from '../data';
+import { fetchCameras, fetchEvents } from '../services/api';
 import { springPop } from '../lib/motion';
 
 export default function Cameras() {
   const [searchParams, setSearchParams] = useSearchParams();
+  const [cameras, setCameras] = useState<Camera[]>(mockCameras);
+  const [cameraEvents, setCameraEvents] = useState<Event[]>([]);
+  const [loading, setLoading] = useState(true);
   const activeCamId = searchParams.get('cam');
   const activeCamera = cameras.find((c) => c.id === activeCamId);
+
+  // Fetch camera list on mount
+  useEffect(() => {
+    fetchCameras()
+      .then((cams) => {
+        if (cams.length > 0) setCameras(cams);
+      })
+      .catch(() => {})  // backend not ready → keep mockCameras
+      .finally(() => setLoading(false));
+  }, []);
+
+  // Fetch events for the selected camera when detail panel opens
+  useEffect(() => {
+    if (!activeCamId) { setCameraEvents([]); return; }
+    fetchEvents({ camera_id: activeCamId, limit: 4 })
+      .then(setCameraEvents)
+      .catch(() => {
+        // Fallback: filter mock events
+        setCameraEvents(mockEvents.filter((e) => e.cameraId === activeCamId));
+      });
+  }, [activeCamId]);
+
 
   const closeDetail = () => {
     const p = new URLSearchParams(searchParams);
@@ -19,9 +46,7 @@ export default function Cameras() {
     setSearchParams(p);
   };
 
-  const cameraEvents = activeCamera
-    ? events.filter((e) => e.cameraId === activeCamera.id)
-    : [];
+
 
   return (
     <div className="p-4 sm:p-6 space-y-4 sm:space-y-5">
@@ -66,11 +91,23 @@ export default function Cameras() {
       <div className="flex flex-col lg:flex-row gap-5">
         {/* Camera grid */}
         <motion.div layout className="flex-1 min-w-0">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-            {cameras.map((cam, i) => (
-              <CameraTile key={cam.id} camera={cam} index={i} />
-            ))}
-          </div>
+          {loading ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="card overflow-hidden" style={{ aspectRatio: '16/9', opacity: 0.4, background: 'var(--color-layer1)' }} />
+              ))}
+            </div>
+          ) : cameras.length === 0 ? (
+            <div className="py-16 text-center">
+              <p className="font-mono text-sm" style={{ color: 'var(--color-text-dim)' }}>No cameras registered in backend</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+              {cameras.map((cam, i) => (
+                <CameraTile key={cam.id} camera={cam} index={i} />
+              ))}
+            </div>
+          )}
         </motion.div>
 
         {/* Camera detail panel */}

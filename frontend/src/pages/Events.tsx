@@ -1,10 +1,11 @@
 // src/pages/Events.tsx
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { Filter, ChevronRight } from 'lucide-react';
-import { events, type Event } from '../data';
+import { type Event, events as mockEvents } from '../data';
+import { fetchEvents } from '../services/api';
 import { stagger, staggerItem } from '../lib/motion';
 
 type Severity = 'all' | 'high' | 'medium' | 'low';
@@ -86,8 +87,17 @@ function EventRow({ event }: { event: Event }) {
 }
 
 export default function Events() {
+  const [events, setEvents] = useState<Event[]>(mockEvents);
   const [severity, setSeverity] = useState<Severity>('all');
   const [typeFilter, setTypeFilter] = useState<EventType>('all');
+
+  useEffect(() => {
+    fetchEvents({ limit: 200 })
+      .then((data) => {
+        if (data.length > 0) setEvents(data);
+      })
+      .catch(() => {});
+  }, []);
 
   const filtered = events.filter((e) => {
     if (severity !== 'all' && e.severity !== severity) return false;

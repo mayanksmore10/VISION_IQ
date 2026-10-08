@@ -1,8 +1,9 @@
 // src/context/MemoryContext.tsx
-// Camera spatial memory — persisted to localStorage
+// Camera spatial memory — persisted to localStorage and synced to backend
 
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { initialMemoryMappings, type MemoryMapping } from '../data';
+import { saveMemory } from '../services/api';
 
 const STORAGE_KEY = 'visioniq_memory';
 
@@ -53,6 +54,11 @@ export function MemoryProvider({ children }: { children: React.ReactNode }) {
         setMappings((prev) => [newMapping, ...prev]);
         setNewMappingId(id);
       }
+      // Sync to backend (fire-and-forget — local state already updated)
+      saveMemory(
+        mapping.location.toLowerCase().replace(/\s+/g, '_'),
+        mapping.cameraId,
+      ).catch(() => { /* ignore network errors */ });
       setTimeout(() => setNewMappingId(null), 3000);
     },
     [mappings]

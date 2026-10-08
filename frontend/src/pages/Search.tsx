@@ -6,6 +6,7 @@ import { Search as SearchIcon, X, Sparkles } from 'lucide-react';
 import ResultCard from '../components/search/ResultCard';
 import ClarificationPanel from '../components/search/ClarificationPanel';
 import { simulateSearch, searchSuggestions, type SearchResult } from '../data';
+import { queryBackend } from '../services/api';
 import { stagger, toastSlide } from '../lib/motion';
 import { useMemory } from '../context/MemoryContext';
 
@@ -34,27 +35,43 @@ export default function SearchPage() {
 
   const runSearch = useCallback(async (q: string) => {
     setPhase('searching');
-    const res = await simulateSearch(q);
-    setResults(res);
-    setPhase('results');
-  }, []);
+    try {
+      const res = await queryBackend(q);
+      if (res.status === 'clarification_required' && res.clarification) {
+        // Backend is asking for clarification — surface through existing UI
+        const loc = res.clarification.key.replace(/_/g, ' ');
+        const displayLoc = loc.split(' ').map((w: string) => w[0].toUpperCase() + w.slice(1)).join(' ');
+        setClarificationLocation(displayLoc);
+        setPendingQuery(q);
+        setSelectedCamId(undefined);
+        setPhase('clarification');
+      } else {
+        setResults(res.results);
+        setPhase('results');
+      }
+    } catch {
+      // Backend unavailable — fallback to local clarification & simulation
+      const clarLoc = needsClarification(q, getCamera);
+      if (clarLoc) {
+        setClarificationLocation(clarLoc);
+        setPendingQuery(q);
+        setSelectedCamId(undefined);
+        setPhase('clarification');
+        return;
+      }
+      const fallback = await simulateSearch(q);
+      setResults(fallback);
+      setPhase('results');
+    }
+  }, [getCamera]);
+
 
   const handleSubmit = useCallback(async (q: string = query) => {
     if (!q.trim()) return;
     setResults([]);
-
-    // Check if clarification needed
-    const clarLoc = needsClarification(q, getCamera);
-    if (clarLoc) {
-      setClarificationLocation(clarLoc);
-      setPendingQuery(q);
-      setSelectedCamId(undefined);
-      setPhase('clarification');
-      return;
-    }
-
     await runSearch(q);
-  }, [query, getCamera, runSearch]);
+  }, [query, runSearch]);
+
 
   const handleClarificationSelect = useCallback((camId: string, camName: string) => {
     setSelectedCamId(camId);

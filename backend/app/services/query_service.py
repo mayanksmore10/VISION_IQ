@@ -32,9 +32,19 @@ def run_query(
     if not resolved_camera_id:
         resolved_camera_id = memory_service.resolve_camera_id(db, query)
 
-    # 2. If still no camera_id, check if query mentions a location we don't know
-    #    (heuristic: look for location-like words not in memory)
-    # For now, if no camera can be resolved we proceed with a global search.
+    # 2. If still no camera_id, check if query requires clarification
+    if not resolved_camera_id:
+        clarification = memory_service.check_needs_clarification(db, query)
+        if clarification:
+            latency_ms = round((time.perf_counter() - start) * 1000, 2)
+            return {
+                "query": query,
+                "status": "clarification_required",
+                "results": [],
+                "count": 0,
+                "clarification": clarification,
+                "latency_ms": latency_ms,
+            }
 
     # 3. Call ChromaDB retrieval
     chroma_results = retrieval_service.query_chromadb(

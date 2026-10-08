@@ -1,8 +1,10 @@
 // src/pages/Evidence.tsx
 
 import { useParams, useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowLeft, MapPin, Clock, Shield, Download, Share2 } from 'lucide-react';
+import { fetchEvidence, type EvidenceDetail } from '../services/api';
 import { getEventById, getCameraById } from '../data';
 
 const typeColor: Record<string, string> = {
@@ -31,10 +33,49 @@ const timelineMarkers = [
 export default function Evidence() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const event = getEventById(id || '');
-  const camera = event ? getCameraById(event.cameraId) : undefined;
+  const [evidence, setEvidence] = useState<EvidenceDetail | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [notFound, setNotFound] = useState(false);
 
-  if (!event) {
+  useEffect(() => {
+    if (!id) { setNotFound(true); setLoading(false); return; }
+    fetchEvidence(id)
+      .then(setEvidence)
+      .catch(() => {
+        const mockEvt = getEventById(id);
+        if (mockEvt) {
+          const cam = getCameraById(mockEvt.cameraId);
+          setEvidence({
+            event_id: Number(mockEvt.id.replace(/\D/g, '')) || 1,
+            camera_id: mockEvt.cameraId,
+            camera_name: cam?.name ?? mockEvt.cameraName,
+            timestamp: 0,
+            event_type: mockEvt.description,
+            frame_url: '',
+            clip_url: '',
+            metadata: null,
+            timestampStr: mockEvt.timestamp,
+            type: mockEvt.type,
+            confidence: mockEvt.confidence,
+            severity: mockEvt.severity,
+          });
+        } else {
+          setNotFound(true);
+        }
+      })
+      .finally(() => setLoading(false));
+  }, [id]);
+
+  if (loading) {
+    return (
+      <div className="p-6 flex items-center justify-center h-full">
+        <p className="font-mono text-xs" style={{ color: 'var(--color-text-dim)' }}>Loading evidence…</p>
+      </div>
+    );
+  }
+
+  if (notFound || !evidence) {
+
     return (
       <div className="p-6 flex flex-col items-center justify-center h-full">
         <p className="font-mono text-sm" style={{ color: 'var(--color-text-dim)' }}>
@@ -47,8 +88,15 @@ export default function Evidence() {
     );
   }
 
-  const color = typeColor[event.type] || 'var(--color-primary)';
-  const label = typeLabel[event.type] || 'EVENT';
+  const color = typeColor[evidence.type] || 'var(--color-primary)';
+  const label = typeLabel[evidence.type] || 'EVENT';
+  // Convenience aliases so the JSX below reads clearly
+  const cameraId   = evidence.camera_id;
+  const cameraName = evidence.camera_name ?? evidence.camera_id;
+  const timestamp  = evidence.timestampStr;
+  const eventDesc  = evidence.event_type?.replace(/_/g, ' ') ?? 'Event detected';
+  const confidence = evidence.confidence;
+  const eventId    = String(evidence.event_id);
 
   return (
     <div className="p-4 sm:p-6 space-y-4 sm:space-y-5">
@@ -65,10 +113,10 @@ export default function Evidence() {
       <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 sm:gap-4">
         <div>
           <div className="font-mono text-[10px] sm:text-xs tracking-widest uppercase mb-1" style={{ color: 'var(--color-text-dim)' }}>
-            Evidence Vault · {event.id}
+            Evidence Vault · {eventId}
           </div>
           <h1 className="text-lg sm:text-xl font-bold" style={{ color: 'var(--color-text)' }}>
-            {event.description}
+            {eventDesc}
           </h1>
         </div>
         <div className="flex items-center gap-2 flex-wrap flex-shrink-0">
@@ -133,7 +181,7 @@ export default function Evidence() {
                 className="absolute -top-5 left-0 font-mono text-[9px] font-bold px-1.5 py-0.5"
                 style={{ background: color, color: '#0a0d14', whiteSpace: 'nowrap' }}
               >
-                ID: 8092 · CONF: {event.confidence}% · {label}
+                ID: 8092 · CONF: {confidence}% · {label}
               </div>
 
               {/* Corner accents */}
@@ -168,13 +216,13 @@ export default function Evidence() {
               className="absolute top-2 right-2 font-mono text-[9px] px-1.5 py-0.5 rounded font-bold"
               style={{ background: 'rgba(10,13,20,0.8)', color: 'var(--color-secondary)', border: '1px solid rgba(0,210,255,0.3)' }}
             >
-              {event.cameraId}
+              {cameraId}
             </div>
             <div
               className="absolute bottom-2 left-2 font-mono text-[9px]"
               style={{ color: 'rgba(240,244,250,0.6)' }}
             >
-              {event.timestamp} · REC
+              {timestamp} · REC
             </div>
             <div
               className="absolute bottom-2 right-2 font-mono text-[9px]"
@@ -217,7 +265,7 @@ export default function Evidence() {
                   className="absolute -top-4 -translate-x-1/2 font-mono text-[8px] px-1 py-0.5 rounded"
                   style={{ background: 'var(--color-secondary)', color: '#0a0d14', whiteSpace: 'nowrap', left: '50%' }}
                 >
-                  {event.timestamp}
+                  {timestamp}
                 </div>
               </motion.div>
 
@@ -250,13 +298,13 @@ export default function Evidence() {
             </div>
 
             {[
-              { label: 'Camera', value: `${event.cameraId} — ${camera?.name}`, icon: <MapPin size={10} /> },
-              { label: 'Location', value: camera?.location || 'Unknown', icon: <MapPin size={10} /> },
-              { label: 'Timestamp', value: event.timestamp, icon: <Clock size={10} />, mono: true },
-              { label: 'Confidence', value: `${event.confidence}%`, icon: <Shield size={10} />, accent: color },
-              { label: 'Severity', value: event.severity.toUpperCase(), mono: true },
-              { label: 'Resolution', value: camera?.resolution || '—' },
-              { label: 'Event ID', value: event.id, mono: true },
+              { label: 'Camera', value: `${cameraId} — ${cameraName}`, icon: <MapPin size={10} /> },
+              { label: 'Location', value: cameraName, icon: <MapPin size={10} /> },
+              { label: 'Timestamp', value: timestamp, icon: <Clock size={10} />, mono: true },
+              { label: 'Confidence', value: `${confidence}%`, icon: <Shield size={10} />, accent: color },
+              { label: 'Severity', value: evidence.severity.toUpperCase(), mono: true },
+              { label: 'Resolution', value: '—' },
+              { label: 'Event ID', value: eventId, mono: true },
             ].map(({ label, value, icon, mono, accent }) => (
               <div key={label} className="flex items-start justify-between gap-2">
                 <div className="flex items-center gap-1.5">
@@ -279,7 +327,7 @@ export default function Evidence() {
                   className="h-full rounded-full"
                   style={{ background: color }}
                   initial={{ width: 0 }}
-                  animate={{ width: `${event.confidence}%` }}
+                  animate={{ width: `${confidence}%` }}
                   transition={{ duration: 0.9, ease: [0.4, 0, 0.2, 1], delay: 0.4 }}
                 />
               </div>
@@ -292,10 +340,10 @@ export default function Evidence() {
               AI Evidence Analysis
             </div>
             <p className="text-xs leading-relaxed" style={{ color: 'var(--color-text-muted)' }}>
-              At <span className="font-mono font-bold" style={{ color: 'var(--color-text)' }}>{event.timestamp}</span>, camera{' '}
-              <span className="font-mono font-bold" style={{ color: 'var(--color-secondary)' }}>{event.cameraId}</span> detected
-              a <span style={{ color: color }}>{event.type}</span> event with{' '}
-              <span className="font-bold" style={{ color: color }}>{event.confidence}%</span> confidence.
+              At <span className="font-mono font-bold" style={{ color: 'var(--color-text)' }}>{timestamp}</span>, camera{' '}
+              <span className="font-mono font-bold" style={{ color: 'var(--color-secondary)' }}>{cameraId}</span> detected
+              a <span style={{ color: color }}>{evidence.type}</span> event with{' '}
+              <span className="font-bold" style={{ color: color }}>{confidence}%</span> confidence.
             </p>
             <p className="text-xs leading-relaxed mt-2" style={{ color: 'var(--color-text-muted)' }}>
               Object tracking confirmed movement direction and velocity. Bounding box intersection with defined zones recorded.

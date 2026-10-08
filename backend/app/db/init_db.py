@@ -3,4 +3,4 @@ from app.models import Camera, Event, CameraMemory, QueryLog
 
 Base.metadata.create_all(bind=engine)
 
-print("✅ All database tables created!")
+print("[OK] All database tables created!")

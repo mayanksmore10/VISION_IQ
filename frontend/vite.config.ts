@@ -7,9 +7,16 @@ export default defineConfig({
     tailwindcss(),
     react(),
   ],
-  // server: {
-  //   host: true,
-  //   port: 5174,
-  //   allowedHosts: true,
-  // },
+  server: {
+    proxy: {
+      '/api': {
+        target: 'http://127.0.0.1:8000',
+        changeOrigin: true,
+      },
+      '/internal': {
+        target: 'http://127.0.0.1:8000',
+        changeOrigin: true,
+      },
+    },
+  },
 })

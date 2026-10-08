@@ -34,6 +34,26 @@ def resolve_camera_id(db: Session, query: str) -> str | None:
     entries = db.query(CameraMemory).filter(CameraMemory.memory_type == "camera_reference").all()
     query_lower = query.lower()
     for entry in entries:
-        if entry.key.lower() in query_lower:
+        key_norm = entry.key.lower()
+        if key_norm in query_lower or key_norm.replace("_", " ") in query_lower:
             return entry.value
+    return None
+
+
+def check_needs_clarification(db: Session, query: str) -> dict | None:
+    """
+    If a query mentions an ambiguous location and that location
+    has not been mapped yet in CameraMemory, return clarification payload.
+    """
+    ambiguous = ["main gate", "rear exit", "parking", "lobby"]
+    query_lower = query.lower()
+    for loc in ambiguous:
+        if loc in query_lower:
+            key = loc.replace(" ", "_")
+            if not get_memory(db, key):
+                return {
+                    "type": "camera_reference",
+                    "key": key,
+                    "message": f"Which camera represents the {loc}?",
+                }
     return None

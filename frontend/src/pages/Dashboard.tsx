@@ -1,14 +1,33 @@
 // src/pages/Dashboard.tsx
 
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Camera, Activity, Database, Zap, Search, ChevronRight, ShieldAlert } from 'lucide-react';
 import MetricCard from '../components/ui/MetricCard';
 import StatusDot from '../components/ui/StatusDot';
 import CameraTile from '../components/cameras/CameraTile';
-import { dashboardMetrics, events, cameras } from '../data';
+import { dashboardMetrics, events as mockEvents, cameras as mockCameras, type Camera as CameraType, type Event } from '../data';
+import { fetchCameras, fetchEvents } from '../services/api';
 
 export default function Dashboard() {
-  const recentEvents = events.slice(0, 4);
+  const [cameras, setCameras] = useState<CameraType[]>(mockCameras);
+  const [recentEvents, setRecentEvents] = useState<Event[]>(mockEvents.slice(0, 4));
+
+  useEffect(() => {
+    fetchCameras()
+      .then(setCameras)
+      .catch(() => {}); // keep mock data on failure
+    fetchEvents({ limit: 4 })
+      .then(setRecentEvents)
+      .catch(() => {}); // keep mock data on failure
+  }, []);
+
+  const liveMetrics = {
+    cameras: cameras.length || dashboardMetrics.cameras,
+    indexedFrames: dashboardMetrics.indexedFrames,
+    events: recentEvents.length || dashboardMetrics.events,
+    avgQueryLatency: dashboardMetrics.avgQueryLatency,
+  };
 
   return (
     <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
@@ -32,25 +51,25 @@ export default function Dashboard() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3">
         <MetricCard
           label="Active Cameras"
-          value={dashboardMetrics.cameras}
+          value={liveMetrics.cameras}
           icon={<Camera size={14} />}
           accent="primary"
         />
         <MetricCard
           label="Indexed Frames"
-          value={dashboardMetrics.indexedFrames}
+          value={liveMetrics.indexedFrames}
           icon={<Database size={14} />}
           accent="secondary"
         />
         <MetricCard
           label="Total Events"
-          value={dashboardMetrics.events}
+          value={liveMetrics.events}
           icon={<Activity size={14} />}
           accent="tertiary"
         />
         <MetricCard
           label="Avg Query Time"
-          value={dashboardMetrics.avgQueryLatency}
+          value={liveMetrics.avgQueryLatency}
           unit="s"
           decimals={1}
           icon={<Zap size={14} />}
