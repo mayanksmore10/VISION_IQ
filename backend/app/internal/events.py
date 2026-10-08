@@ -34,7 +34,7 @@ def ingest_event(
         event_type=event.event_type,
         frame_path=event.frame_path,
         clip_path=event.clip_path,
-        metadata=event.metadata,
+        event_metadata=event.metadata,
     )
 
     db.add(new_event)
@@ -71,5 +71,5 @@ def get_internal_event(
         "event_type": event.event_type,
         "frame_path": event.frame_path,
         "clip_path": event.clip_path,
-        "metadata": event.metadata,
+        "metadata": event.event_metadata,
     }
