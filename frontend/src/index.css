@@ -1,0 +1,353 @@
+@import "tailwindcss";
+
+/* ============================================================
+   VisionIQ Design System — Surveillance HUD
+   Single source of truth for all design tokens
+   ============================================================ */
+
+@theme {
+  /* --- Color Tokens --- */
+  --color-base:         #0a0d14;
+  --color-layer1:       #0f141f;
+  --color-layer2:       #161d2b;
+  --color-surface:      #10131a;
+  --color-surface-hi:   #1d1f27;
+  --color-surface-top:  #272a32;
+  --color-border:       #1f2a3d;
+  --color-border-hi:    #26354d;
+
+  --color-primary:      #00f298;
+  --color-primary-dim:  #00e38e;
+  --color-secondary:    #00d2ff;
+  --color-tertiary:     #ffb020;
+  --color-danger:       #ff3b30;
+
+  --color-text:         #f0f4fa;
+  --color-text-muted:   #7a8b9e;
+  --color-text-dim:     #415166;
+
+  /* --- Font Families --- */
+  --font-sans: 'Inter', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+
+  /* --- Spacing --- */
+  --spacing-sidebar: 15rem;
+}
+
+/* ============================================================
+   Global Reset & Base
+   ============================================================ */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  background-color: var(--color-base);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+}
+
+/* ============================================================
+   Typography
+   ============================================================ */
+.font-mono { font-family: var(--font-mono); }
+.font-sans  { font-family: var(--font-sans); }
+
+/* ============================================================
+   Scrollbar
+   ============================================================ */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: var(--color-layer1); }
+::-webkit-scrollbar-thumb { background: var(--color-border-hi); border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover { background: var(--color-text-dim); }
+
+/* ============================================================
+   Focus Visible
+   ============================================================ */
+:focus-visible {
+  outline: 2px solid var(--color-secondary);
+  outline-offset: 2px;
+}
+
+/* ============================================================
+   Scanline overlay (subtle grid)
+   ============================================================ */
+.scanline-bg {
+  background-image:
+    linear-gradient(rgba(0, 242, 152, 0.015) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 242, 152, 0.015) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+/* ============================================================
+   Glow utilities
+   ============================================================ */
+.glow-primary {
+  box-shadow: 0 0 0 1px var(--color-primary), 0 0 16px rgba(0,242,152,0.25);
+}
+.glow-secondary {
+  box-shadow: 0 0 0 1px var(--color-secondary), 0 0 12px rgba(0,210,255,0.2);
+}
+.glow-danger {
+  box-shadow: 0 0 0 1px var(--color-danger), 0 0 12px rgba(255,59,48,0.25);
+}
+.glow-amber {
+  box-shadow: 0 0 0 1px var(--color-tertiary), 0 0 12px rgba(255,176,32,0.2);
+}
+
+/* ============================================================
+   Camera feed / viewfinder corners
+   ============================================================ */
+.viewfinder {
+  position: relative;
+}
+.viewfinder::before,
+.viewfinder::after {
+  content: '';
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  z-index: 10;
+  pointer-events: none;
+}
+.viewfinder::before {
+  top: 6px; left: 6px;
+  border-top: 2px solid var(--color-secondary);
+  border-left: 2px solid var(--color-secondary);
+}
+.viewfinder::after {
+  bottom: 6px; right: 6px;
+  border-bottom: 2px solid var(--color-secondary);
+  border-right: 2px solid var(--color-secondary);
+}
+
+/* ============================================================
+   Status pulse dot
+   ============================================================ */
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.3; }
+}
+.pulse-dot {
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+
+/* ============================================================
+   Scan line animation (for loading states)
+   ============================================================ */
+@keyframes scan-sweep {
+  0%   { top: 0%; opacity: 0.9; }
+  90%  { top: 100%; opacity: 0.9; }
+  100% { top: 100%; opacity: 0; }
+}
+.scan-line {
+  position: absolute;
+  left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--color-primary), transparent);
+  animation: scan-sweep 1.4s ease-in-out infinite;
+  pointer-events: none;
+}
+
+/* ============================================================
+   Confidence bar fill
+   ============================================================ */
+@keyframes bar-fill {
+  from { width: 0%; }
+}
+.confidence-bar-fill {
+  animation: bar-fill 0.8s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+/* ============================================================
+   Number count up — handled in JS via Framer Motion
+   ============================================================ */
+
+/* ============================================================
+   Reduced motion overrides
+   ============================================================ */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ============================================================
+   Layout utilities
+   ============================================================ */
+.app-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  height: 100vh;
+  overflow: hidden;
+  position: relative;
+}
+
+@media (min-width: 1024px) {
+  .app-shell {
+    flex-direction: row;
+  }
+}
+
+.sidebar {
+  width: var(--spacing-sidebar);
+  max-width: 82vw;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--color-layer1);
+  border-right: 1px solid var(--color-border);
+  overflow-y: auto;
+  overflow-x: hidden;
+  z-index: 50;
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@media (max-width: 1023px) {
+  .sidebar {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    height: 100%;
+    transform: translateX(-100%);
+    box-shadow: 0 0 30px rgba(0, 0, 0, 0.8);
+  }
+
+  .sidebar.sidebar-open {
+    transform: translateX(0);
+  }
+}
+
+.main-content {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  background-color: var(--color-base);
+  -webkit-overflow-scrolling: touch;
+}
+
+/* ============================================================
+   Card component
+   ============================================================ */
+.card {
+  background-color: var(--color-layer1);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+}
+
+.card-hi {
+  background-color: rgba(22, 29, 43, 0.75);
+  border: 1px solid var(--color-border-hi);
+  border-radius: 4px;
+  backdrop-filter: blur(12px);
+}
+
+/* ============================================================
+   Input
+   ============================================================ */
+.input-base {
+  background-color: var(--color-layer1);
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  border-radius: 4px;
+  padding: 0.625rem 0.875rem;
+  width: 100%;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+.input-base::placeholder { color: var(--color-text-dim); }
+.input-base:focus { border-color: var(--color-secondary); }
+
+/* ============================================================
+   Button variants
+   ============================================================ */
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1.25rem;
+  background-color: var(--color-primary);
+  color: #0a0d14;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: box-shadow 0.2s ease, filter 0.2s ease;
+}
+.btn-primary:hover {
+  box-shadow: 0 0 0 0 transparent, 0 0 20px rgba(0,242,152,0.35);
+  filter: brightness(1.05);
+}
+
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1.25rem;
+  background-color: rgba(0, 210, 255, 0.08);
+  color: var(--color-secondary);
+  border: 1px solid var(--color-secondary);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+.btn-secondary:hover { background-color: rgba(0, 210, 255, 0.15); }
+
+.btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.875rem;
+  background-color: rgba(31, 42, 61, 0.4);
+  color: var(--color-text-muted);
+  border: 1px solid var(--color-border-hi);
+  font-size: 0.75rem;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+.btn-ghost:hover { color: var(--color-text); border-color: var(--color-text-dim); }
+
+/* ============================================================
+   Badge / chip
+   ============================================================ */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 22px;
+  padding: 0 8px;
+  border-radius: 2px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.badge-online  { background: rgba(0,242,152,0.12); color: var(--color-primary); }
+.badge-warning { background: rgba(255,176,32,0.12); color: var(--color-tertiary); }
+.badge-danger  { background: rgba(255,59,48,0.12);  color: var(--color-danger); }
+.badge-info    { background: rgba(0,210,255,0.12);  color: var(--color-secondary); }
+.badge-muted   { background: rgba(31,42,61,0.5);    color: var(--color-text-muted); }
