@@ -1,0 +1,39 @@
+"""
+memory_service.py — CRUD helpers for the camera_memory table.
+"""
+from sqlalchemy.orm import Session
+
+from app.models.memory import CameraMemory
+
+
+def get_memory(db: Session, key: str) -> CameraMemory | None:
+    """Return a CameraMemory row by key, or None."""
+    return db.query(CameraMemory).filter(CameraMemory.key == key).first()
+
+
+def upsert_memory(db: Session, key: str, value: str, memory_type: str = "camera_reference") -> CameraMemory:
+    """Insert or update a memory entry."""
+    entry = db.query(CameraMemory).filter(CameraMemory.key == key).first()
+    if entry:
+        entry.value = value
+        entry.memory_type = memory_type
+    else:
+        entry = CameraMemory(key=key, value=value, memory_type=memory_type)
+        db.add(entry)
+    db.commit()
+    db.refresh(entry)
+    return entry
+
+
+def resolve_camera_id(db: Session, query: str) -> str | None:
+    """
+    Very lightweight memory-based camera resolver.
+    Checks every stored key to see if it appears as a substring of the query.
+    Returns the associated camera_id value if a match is found.
+    """
+    entries = db.query(CameraMemory).filter(CameraMemory.memory_type == "camera_reference").all()
+    query_lower = query.lower()
+    for entry in entries:
+        if entry.key.lower() in query_lower:
+            return entry.value
+    return None
